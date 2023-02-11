@@ -1,0 +1,188 @@
+use std::ops::{Add, Div, Mul, Rem, Sub};
+
+use crate::tokeniser::Token;
+
+type DualOperator = fn(f64, f64) -> f64;
+
+type SingleOperator = fn(f64) -> f64;
+
+#[derive(Debug)]
+pub enum ParseError {
+    UnknownOperator(char),
+    UnknownFunctionOrVariable(String),
+    InvalidNumber(String),
+    UnexpectedOperator,
+    UnexpectedNumber,
+    UnexpectedLParen,
+    UnexpectedRParen,
+}
+
+#[derive(Debug)]
+pub enum TreeNode {
+    None,
+    Value(f64),
+    DualNode {
+        left: Box<TreeNode>,
+        op: OperatorDual,
+        right: Box<TreeNode>,
+    },
+    SingleNode {
+        op: OperatorSingle,
+        val: Box<TreeNode>,
+    },
+}
+
+impl TreeNode {
+    fn get_val(self, def: f64) -> f64 {
+        return match self {
+            Self::None => def,
+            _ => self.get_value(),
+        };
+    }
+
+    pub fn get_value(self) -> f64 {
+        return match self {
+            Self::Value(n) => n,
+            Self::SingleNode { op, val } => (op.op)(val.get_val(op.default)),
+            Self::DualNode { left, op, right } => (op.op)(
+                left.get_val(op.default_left),
+                right.get_val(op.default_right),
+            ),
+            _ => 0.,
+        };
+    }
+}
+
+#[derive(Debug)]
+struct OperatorSingle {
+    // something like 4! = 24
+    weight: i32,
+    op: SingleOperator,
+    default: f64,
+}
+
+#[derive(Debug)]
+struct OperatorDual {
+    // something like 2 + 2 = 4
+    weight: i32,
+    op: DualOperator,
+    default_left: f64,
+    default_right: f64,
+}
+
+#[derive(Debug)]
+enum Operator {
+    Single(OperatorSingle),
+    Dual(OperatorDual),
+}
+
+fn get_operator(c: &char) -> Result<OperatorDual, ParseError> {
+    match c {
+        '+' => Ok(OperatorDual {
+            weight: 0,
+            op: Add::add,
+            default_left: 0.,
+            default_right: 0.,
+        }),
+        '-' => Ok(OperatorDual {
+            weight: 0,
+            op: Sub::sub,
+            default_left: 0.,
+            default_right: 0.,
+        }),
+        '*' => Ok(OperatorDual {
+            weight: 8,
+            op: Mul::mul,
+            default_left: 1.,
+            default_right: 1.,
+        }),
+        '/' => Ok(OperatorDual {
+            weight: 8,
+            op: Div::div,
+            default_left: 1.,
+            default_right: 1.,
+        }),
+        '%' => Ok(OperatorDual {
+            weight: 8,
+            op: Rem::rem,
+            default_left: 1.,
+            default_right: 1.,
+        }),
+        '^' => Ok(OperatorDual {
+            weight: 16,
+            op: f64::powf,
+            default_left: 0.,
+            default_right: 1.,
+        }),
+        _ => Err(ParseError::UnknownOperator(c.to_owned())),
+    }
+}
+
+pub fn parse(vec: Vec<Token>) -> Result<TreeNode, ParseError> {
+    let res = get_tree_node(&vec, 0)?;
+    return Ok(res.0);
+}
+
+fn get_tree_node(vec: &Vec<Token>, at: usize) -> Result<(TreeNode, usize), ParseError> {
+    if let Some(token) = vec.get(at) {
+        return match token {
+            Token::Num(s) => {
+                if let Ok(f) = s.parse() {
+                    if let Some(token1) = vec.get(at + 1) {
+                        match token1 {
+                            Token::Num(_s) => Err(ParseError::UnexpectedNumber),
+                            Token::FunOrVar(_s) => todo!(),
+                            Token::LParen => todo!("Make auto multiply 5(3+2) == 5*(3+2)"),
+                            Token::RParen => Ok((TreeNode::Value(f), at + 1)),
+                            Token::Op(c) => {
+                                let (next, a) = get_tree_node(vec, at + 2)?;
+                                Ok((
+                                    TreeNode::DualNode {
+                                        left: Box::new(TreeNode::Value(f)),
+                                        op: get_operator(c)?,
+                                        right: Box::new(next),
+                                    },
+                                    a,
+                                ))
+                            }
+                        }
+                    } else {
+                        Ok((TreeNode::Value(f), at))
+                    }
+                } else {
+                    Err(ParseError::InvalidNumber(s.clone()))
+                }
+            }
+            Token::FunOrVar(_s) => todo!(),
+            Token::LParen => {
+                let (node, next) = get_tree_node(vec, at + 1)?;
+
+                if let Some(token) = vec.get(next + 1) {
+                    println!("{:?}", token);
+                    match token {
+                        Token::Num(_) => todo!(),
+                        Token::FunOrVar(_) => todo!(),
+                        Token::LParen => todo!("Make auto multiply 5(3+2) == 5*(3+2)"),
+                        Token::RParen => Ok((node, next)),
+                        Token::Op(c) => {
+                            let (next, a) = get_tree_node(vec, next + 2)?;
+                            Ok((
+                                TreeNode::DualNode {
+                                    left: Box::new(node),
+                                    op: get_operator(c)?,
+                                    right: Box::new(next),
+                                },
+                                a,
+                            ))
+                        }
+                    }
+                } else {
+                    Ok((node, next))
+                }
+            }
+            Token::RParen => Ok((TreeNode::None, at)),
+            Token::Op(_c) => Err(ParseError::UnexpectedOperator),
+        };
+    }
+    Ok((TreeNode::None, at))
+}
