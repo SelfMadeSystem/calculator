@@ -73,8 +73,7 @@ impl TreeNode {
 pub fn parse(vec: &Vec<Token>) -> Result<TreeNode, ParseError> {
     let mut vec = vec.clone();
 
-    find_and_replace(&mut vec, 0)?; // doing this b4 just because do while loops don't exist in rust
-    while vec.len() > 1 {
+    while vec.len() > 1 || !matches!(vec[0], Token::ParsedTree(_)) {
         // TODO: Make this more efficient.
         find_and_replace(&mut vec, 0)?;
     }
@@ -307,7 +306,7 @@ fn replace_paren(vec: &mut Vec<Token>, at: usize) -> Result<(), ParseError> {
         i += 1;
     }
 
-    while subvec.len() > 1 {
+    while subvec.len() > 1 || !matches!(subvec[0], Token::ParsedTree(_)) {
         find_and_replace(&mut subvec, 0)?;
     }
 
