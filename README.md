@@ -10,6 +10,23 @@ cargo run
 
 For now, you can edit the `main.rs` file to change the expression.
 
+## Features
+
+- [ ] Basic arithmetic
+  - [x] Basic operators (left value, operator, right value) (ex: `2 + 2` or `8 nPr 3`)
+  - [x] Parentheses
+  - [x] Order of operations (PEMDAS)
+  - [ ] Implicit multiplication
+  - [ ] Negative numbers
+- [ ] Functions (either before or after a value) (ex: `sqrt 4`, or `4!`)
+- [x] Constants
+  - [x] pi
+  - [x] e
+- [ ] CLI (might never happen)
+  - [ ] Read from stdin
+  - [ ] Read from file
+  - [ ] Read from command line
+
 ## Algorithm
 
 I made my own algorithm to parse the expression. It's not perfect, but it works.
