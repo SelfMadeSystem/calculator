@@ -192,12 +192,12 @@ fn get_thing_str(s: &str) -> Result<Token, TokenError> {
         // Operators
         "nCr" => Ok(Token::Operator {
             fun: nCr,
-            priority: 4,
+            priority: 5, // on my calculator, nCr and nPr are higher than multiplication and division
             name: "nCr".to_string(),
         }),
         "nPr" => Ok(Token::Operator {
             fun: nPr,
-            priority: 4,
+            priority: 5,
             name: "nPr".to_string(),
         }),
         // Constants

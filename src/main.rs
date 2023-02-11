@@ -25,7 +25,7 @@ mod tokeniser;
 // }
 
 fn main() {
-    let tokens = tokenise("7 nPr 3".to_owned());
+    let tokens = tokenise("5 nCr 2 * 7nCr2".to_owned());
     let tokens = tokens.expect("Failed to tokenise");
     println!("Tokens: {:?}", tokens);
     let parsed = parse(&tokens);
