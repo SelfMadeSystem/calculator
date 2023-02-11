@@ -10,7 +10,7 @@ pub enum ParseError {
     UnexpectedNumber,
     UnexpectedLParen,
     UnexpectedRParen,
-}
+} // TODO: figure out which of these are actually needed
 
 #[derive(Debug, Clone)]
 pub struct TreeNode {
@@ -40,22 +40,22 @@ impl TreeNode {
                 Token::Function {
                     fun,
                     priority: _,
-                    after,
+                    after: _,
                     name: _,
                 } => {
-                    if after {
-                        if self.right.is_none() {
-                            return Err(ParseError::UnexpectedFunction("No right".to_string()));
-                        }
-                        let right = self.right.unwrap().get_value()?;
-                        return Ok(fun(right));
-                    } else {
-                        if self.left.is_none() {
-                            return Err(ParseError::UnexpectedFunction("No left".to_string()));
-                        }
-                        let left = self.left.unwrap().get_value()?;
-                        return Ok(fun(left));
+                    // if after { // ngl don't see a reason to have left or right depend on after
+                    if self.left.is_none() {
+                        return Err(ParseError::UnexpectedFunction("No left".to_string()));
                     }
+                    let left = self.left.unwrap().get_value()?;
+                    return Ok(fun(left));
+                    // } else {
+                    //     if self.right.is_none() {
+                    //         return Err(ParseError::UnexpectedFunction("No left".to_string()));
+                    //     }
+                    //     let left = self.left.unwrap().get_value()?;
+                    //     return Ok(fun(left));
+                    // }
                 }
                 Token::Constant(value) => {
                     return Ok(value);
@@ -95,29 +95,46 @@ pub fn parse(vec: &Vec<Token>) -> Result<TreeNode, ParseError> {
 }
 
 macro_rules! replace_stuff {
-    ($t1:expr, $t3:expr, $t2:expr, $vec:expr, $at:expr) => {
+    ($left:expr, $right:expr, $val:expr, $vec:expr, $at:expr) => {
         let tree = TreeNode {
-            left: Some(Box::new(if let Token::ParsedTree(t) = $t1 {
+            left: Some(Box::new(if let Token::ParsedTree(t) = $left {
                 *t.clone()
             } else {
                 TreeNode {
                     left: None,
                     right: None,
-                    value: Some($t1.clone()),
+                    value: Some($left.clone()),
                 }
             })),
-            right: Some(Box::new(if let Token::ParsedTree(t) = $t3 {
+            right: Some(Box::new(if let Token::ParsedTree(t) = $right {
                 *t.clone()
             } else {
                 TreeNode {
                     left: None,
                     right: None,
-                    value: Some($t3.clone()),
+                    value: Some($right.clone()),
                 }
             })),
-            value: Some($t2.clone()),
+            value: Some($val.clone()),
         };
         $vec.drain($at..$at + 2);
+        $vec[$at] = Token::ParsedTree(Box::new(tree));
+    };
+    ($left:expr, $val:expr, $vec:expr, $at:expr) => {
+        let tree = TreeNode {
+            left: Some(Box::new(if let Token::ParsedTree(t) = $left {
+                *t.clone()
+            } else {
+                TreeNode {
+                    left: None,
+                    right: None,
+                    value: Some($left.clone()),
+                }
+            })),
+            right: None,
+            value: Some($val.clone()),
+        };
+        $vec.drain($at..$at + 1);
         $vec[$at] = Token::ParsedTree(Box::new(tree));
     };
 }
@@ -135,6 +152,7 @@ Algorithm:
 
 num can be either a number, a lparen, or a ParsedToken. If it's an lparen, call replace_paren with position of lparen
 */
+// TODO: DRY this up using macros probably. I have lots of repeated code
 fn find_and_replace(vec: &mut Vec<Token>, at: usize) -> Result<(), ParseError> {
     // for ex with 1 + 2 * 3
     let val1 = vec.get(at); // 1
@@ -236,11 +254,33 @@ fn find_and_replace(vec: &mut Vec<Token>, at: usize) -> Result<(), ParseError> {
                             }
                         }
                         Token::Function {
-                            fun,
-                            priority,
+                            fun: _,
+                            priority: _,
                             after,
-                            name,
-                        } => todo!(),
+                            name: _,
+                        } => {
+                            if *after {
+                                // for ex 5!. So no need to check for next token
+                                let tree = TreeNode {
+                                    left: Some(Box::new(if let Token::ParsedTree(t) = t1 {
+                                        *t.clone()
+                                    } else {
+                                        TreeNode {
+                                            left: None,
+                                            right: None,
+                                            value: Some(t1.clone()),
+                                        }
+                                    })),
+                                    right: None,
+                                    value: Some(t2.clone()),
+                                };
+                                vec.drain(at..at + 1);
+                                vec[at] = Token::ParsedTree(Box::new(tree));
+                                return Ok(());
+                            } else {
+                                todo!("Handle implicit multiplication")
+                            }
+                        }
                         Token::Constant(_) => todo!(),
                         Token::ParsedTree(_) => todo!(),
                     }
@@ -262,12 +302,88 @@ fn find_and_replace(vec: &mut Vec<Token>, at: usize) -> Result<(), ParseError> {
                 return Err(ParseError::UnexpectedOperator(name.to_string())); // TODO: Handle negative numbers
             }
             Token::Function {
-                fun,
-                priority,
+                fun: _,
+                priority: p1,
                 after,
                 name,
             } => {
                 if !after {
+                    if let Some(t2) = val2 {
+                        match t2 {
+                            Token::LParen => {
+                                replace_paren(vec, at + 1)?;
+                                return Ok(()); // let the next iteration handle it
+                            }
+                            Token::RParen => {
+                                return Err(ParseError::UnexpectedRParen);
+                            }
+                            Token::Operator {
+                                fun: _,
+                                priority: _,
+                                name,
+                            } => {
+                                return Err(ParseError::UnexpectedOperator(name.to_string()));
+                                // TODO: Handle negative numbers
+                            }
+                            Token::Function {
+                                fun: _,
+                                priority: _,
+                                after: _,
+                                name: _,
+                            } => todo!(),
+                            Token::Constant(_) | Token::ParsedTree(_) => {
+                                if let Some(t3) = val3 {
+                                    match t3 {
+                                        Token::LParen => {
+                                            replace_paren(vec, at + 2)?;
+                                            return Ok(()); // let the next iteration handle it
+                                        }
+                                        Token::RParen => {
+                                            return Err(ParseError::UnexpectedRParen);
+                                        }
+                                        Token::Operator {
+                                            fun: _,
+                                            priority: p2,
+                                            name: _,
+                                        } => {
+                                            if p2 > p1 {
+                                                find_and_replace(vec, at + 2)?;
+                                                return Ok(());
+                                            } else {
+                                                replace_stuff!(t2, t1, vec, at);
+                                                return Ok(());
+                                            }
+                                        }
+                                        Token::Function {
+                                            fun: _,
+                                            priority: p2,
+                                            after,
+                                            name: _,
+                                        } => {
+                                            if *after && p2 > p1 {
+                                                find_and_replace(vec, at + 2)?;
+                                                return Ok(());
+                                            } else {
+                                                replace_stuff!(t2, t1, vec, at);
+                                                return Ok(());
+                                            }
+                                        }
+                                        Token::Constant(_) => {
+                                            todo!("Handle implicit multiplication")
+                                        }
+                                        Token::ParsedTree(_) => {
+                                            todo!("Handle implicit multiplication")
+                                        }
+                                    }
+                                } else {
+                                    replace_stuff!(t2, t1, vec, at);
+                                    return Ok(());
+                                }
+                            }
+                        }
+                    } else {
+                        return Err(ParseError::UnexpectedFunction(name.to_string()));
+                    }
                 } else {
                     return Err(ParseError::UnexpectedFunction(name.to_string()));
                 }

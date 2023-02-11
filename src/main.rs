@@ -25,7 +25,7 @@ mod tokeniser;
 // }
 
 fn main() {
-    let tokens = tokenise("((((pi))))".to_owned());
+    let tokens = tokenise("sqrt (5 * 6!)".to_owned());
     let tokens = tokens.expect("Failed to tokenise");
     println!("Tokens: {:?}", tokens);
     let parsed = parse(&tokens);
