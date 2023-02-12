@@ -18,7 +18,7 @@ For now, you can edit the `main.rs` file to change the expression.
   - [x] Order of operations (PEMDAS)
   - [ ] Implicit multiplication
   - [ ] Negative numbers
-- [ ] Functions (either before or after a value) (ex: `sqrt 4`, or `4!`)
+- [x] Functions (either before or after a value) (ex: `sqrt 4`, or `4!`)
 - [x] Constants
   - [x] pi
   - [x] e
