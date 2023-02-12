@@ -154,11 +154,10 @@ num can be either a number, a lparen, or a ParsedToken. If it's an lparen, call 
 */
 // TODO: DRY this up using macros probably. I have lots of repeated code
 fn find_and_replace(vec: &mut Vec<Token>, at: usize) -> Result<(), ParseError> {
-    // for ex with 1 + 2 * 3
-    let val1 = vec.get(at); // 1
-    let val2 = vec.get(at + 1); // +
-    let val3 = vec.get(at + 2); // 2
-    let val4 = vec.get(at + 3); // *
+    let val1 = vec.get(at);
+    let val2 = vec.get(at + 1);
+    let val3 = vec.get(at + 2);
+    let val4 = vec.get(at + 3);
 
     if let Some(t1) = val1 {
         match t1 {
@@ -240,15 +239,15 @@ fn find_and_replace(vec: &mut Vec<Token>, at: usize) -> Result<(), ParseError> {
                                         }
                                     }
                                     Token::Operator {
-                                        fun,
-                                        priority,
-                                        name,
+                                        fun: _,
+                                        priority: _,
+                                        name: _,
                                     } => todo!(),
                                     Token::Function {
-                                        fun,
-                                        priority,
-                                        after,
-                                        name,
+                                        fun: _,
+                                        priority: _,
+                                        after: _,
+                                        name: _,
                                     } => todo!(),
                                 }
                             }
@@ -299,6 +298,159 @@ fn find_and_replace(vec: &mut Vec<Token>, at: usize) -> Result<(), ParseError> {
                 priority: p1,
                 name,
             } => {
+                if name == "-" {
+                    if let Some(t2) = val2 {
+                        match t2 {
+                            Token::LParen => {
+                                replace_paren(vec, at + 1)?;
+                                return Ok(()); // let the next iteration handle it
+                            }
+                            Token::RParen => {
+                                return Err(ParseError::UnexpectedRParen);
+                            }
+                            Token::Operator {
+                                fun: _,
+                                priority: _,
+                                name,
+                            } => {
+                                return Err(ParseError::UnexpectedOperator(name.to_string()));
+                            }
+                            Token::Function {
+                                fun: _,
+                                priority: _,
+                                after: _,
+                                name,
+                            } => {
+                                return Err(ParseError::UnexpectedOperator(name.to_string()));
+                            }
+                            Token::Constant(_) | Token::ParsedTree(_) => {
+                                if let Some(t3) = val3 {
+                                    match t3 {
+                                        Token::LParen => {
+                                            replace_paren(vec, at + 2)?;
+                                            return Ok(()); // let the next iteration handle it
+                                        }
+                                        Token::RParen => {
+                                            return Err(ParseError::UnexpectedRParen);
+                                        }
+                                        Token::Operator {
+                                            fun: _,
+                                            priority: p2,
+                                            name: _,
+                                        } => {
+                                            if p2 > p1 {
+                                                find_and_replace(vec, at + 1)?;
+                                                return Ok(());
+                                            } else {
+                                                let tree = TreeNode {
+                                                    left: Some(Box::new(TreeNode {
+                                                        left: None,
+                                                        right: None,
+                                                        value: Some(Token::Constant(0.0)),
+                                                    })),
+                                                    right: Some(Box::new(TreeNode {
+                                                        left: None,
+                                                        right: None,
+                                                        value: Some(t2.clone()),
+                                                    })),
+                                                    value: Some(Token::Operator {
+                                                        fun: |a, b| a - b,
+                                                        priority: 2,
+                                                        name: "-".to_string(),
+                                                    }),
+                                                };
+                                                vec.drain(at..at + 1);
+                                                vec[at] = Token::ParsedTree(Box::new(tree));
+                                                return Ok(());
+                                            }
+                                        }
+                                        Token::Function {
+                                            fun: _,
+                                            priority: p2,
+                                            after,
+                                            name: _,
+                                        } => {
+                                            if *after && p2 > p1 {
+                                                find_and_replace(vec, at + 1)?;
+                                                return Ok(());
+                                            } else {
+                                                let tree = TreeNode {
+                                                    left: Some(Box::new(TreeNode {
+                                                        left: None,
+                                                        right: None,
+                                                        value: Some(Token::Constant(0.0)),
+                                                    })),
+                                                    right: Some(Box::new(TreeNode {
+                                                        left: None,
+                                                        right: None,
+                                                        value: Some(t2.clone()),
+                                                    })),
+                                                    value: Some(Token::Operator {
+                                                        fun: |a, b| a - b,
+                                                        priority: 2,
+                                                        name: "-".to_string(),
+                                                    }),
+                                                };
+                                                vec.drain(at..at + 1);
+                                                vec[at] = Token::ParsedTree(Box::new(tree));
+                                                return Ok(());
+                                            }
+                                        }
+                                        _ => {
+                                            let tree = TreeNode {
+                                                left: Some(Box::new(TreeNode {
+                                                    left: None,
+                                                    right: None,
+                                                    value: Some(Token::Constant(0.0)),
+                                                })),
+                                                right: Some(Box::new(TreeNode {
+                                                    left: None,
+                                                    right: None,
+                                                    value: Some(t2.clone()),
+                                                })),
+                                                value: Some(Token::Operator {
+                                                    fun: |a, b| a - b,
+                                                    priority: 2,
+                                                    name: "-".to_string(),
+                                                }),
+                                            };
+                                            vec.drain(at..at + 1);
+                                            vec[at] = Token::ParsedTree(Box::new(tree));
+                                            return Ok(());
+                                        }
+                                    }
+                                } else {
+                                    let tree = TreeNode {
+                                        left: Some(Box::new(TreeNode {
+                                            left: None,
+                                            right: None,
+                                            value: Some(Token::Constant(0.0)),
+                                        })),
+                                        right: Some(Box::new(
+                                            if let Token::ParsedTree(t) = t2 {
+                                                *t.clone()
+                                            } else {
+                                                TreeNode {
+                                                    left: None,
+                                                    right: None,
+                                                    value: Some(t2.clone()),
+                                                }
+                                            },
+                                        )),
+                                        value: Some(Token::Operator {
+                                            fun: |a, b| a - b,
+                                            priority: 2,
+                                            name: "-".to_string(),
+                                        }),
+                                    };
+                                    vec.drain(at..at + 1);
+                                    vec[at] = Token::ParsedTree(Box::new(tree));
+                                    return Ok(());
+                                }
+                            }
+                        }
+                    }
+                }
                 return Err(ParseError::UnexpectedOperator(name.to_string())); // TODO: Handle negative numbers
             }
             Token::Function {
