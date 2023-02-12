@@ -1,4 +1,6 @@
-use tokeniser::Token;
+// use tokeniser::Token;
+
+use clap::Parser;
 
 use crate::{parser::parse, tokeniser::tokenise};
 
@@ -24,14 +26,23 @@ mod tokeniser;
 //     s
 // }
 
+#[derive(Parser)]
+struct Cli {
+    /// The expression to evaluate
+    expression: String,
+}
+
 fn main() {
-    let tokens = tokenise("-4^2".to_owned());
-    let tokens = tokens.expect("Failed to tokenise");
-    println!("Tokens: {:?}", tokens);
-    let parsed = parse(&tokens);
-    let parsed = parsed.expect("Failed to parse");
-    println!("Parsed: {:?}", parsed);
-    let value = parsed.get_value();
-    let value = value.expect("Failed to get value");
-    println!("Value: {}", value);
+    let cli = Cli::parse();
+
+    let tokens = tokenise(cli.expression);
+    let tokens = tokens.expect("Failed to tokenise expression");
+
+    let tree = parse(&tokens);
+    let tree = tree.expect("Failed to parse expression");
+
+    let result = tree.eval();
+    let result = result.expect("Failed to evaluate expression");
+
+    println!("{}", result);
 }

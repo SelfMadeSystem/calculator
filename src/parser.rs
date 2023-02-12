@@ -2,13 +2,13 @@ use crate::tokeniser::Token;
 
 #[derive(Debug)]
 pub enum ParseError {
-    UnknownOperator(char),
-    UnknownFunctionOrVariable(String),
+    // UnknownOperator(char),
+    // UnknownFunctionOrVariable(String),
     InvalidNumber(String),
     UnexpectedOperator(String),
     UnexpectedFunction(String),
-    UnexpectedNumber,
-    UnexpectedLParen,
+    // UnexpectedNumber,
+    // UnexpectedLParen,
     UnexpectedRParen,
 } // TODO: figure out which of these are actually needed
 
@@ -20,7 +20,7 @@ pub struct TreeNode {
 }
 
 impl TreeNode {
-    pub fn get_value(self) -> Result<f64, ParseError> {
+    fn get_value(self) -> Result<f64, ParseError> {
         if let Some(val) = self.value {
             match val {
                 Token::Operator {
@@ -67,6 +67,10 @@ impl TreeNode {
         } else {
             return Err(ParseError::InvalidNumber("No value".to_string()));
         }
+    }
+
+    pub fn eval(self) -> Result<f64, ParseError> {
+        return self.get_value();
     }
 }
 
@@ -153,6 +157,7 @@ Algorithm:
 num can be either a number, a lparen, or a ParsedToken. If it's an lparen, call replace_paren with position of lparen
 */
 // TODO: DRY this up using macros probably. I have lots of repeated code
+// TODO: CLEAN THIS TF UP
 fn find_and_replace(vec: &mut Vec<Token>, at: usize) -> Result<(), ParseError> {
     let val1 = vec.get(at);
     let val2 = vec.get(at + 1);

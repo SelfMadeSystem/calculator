@@ -16,16 +16,16 @@ For now, you can edit the `main.rs` file to change the expression.
   - [x] Basic operators (left value, operator, right value) (ex: `2 + 2` or `8 nPr 3`)
   - [x] Parentheses
   - [x] Order of operations (PEMDAS)
-  - [ ] Implicit multiplication
-  - [ ] Negative numbers
+  - [ ] Implicit multiplication (ex: `2(2+2)` or `2sqrt(2)`) (will probably do after I dry up the code)
+  - [x] Negative numbers
 - [x] Functions (either before or after a value) (ex: `sqrt 4`, or `4!`)
 - [x] Constants
   - [x] pi
   - [x] e
-- [ ] CLI (might never happen)
-  - [ ] Read from stdin
-  - [ ] Read from file
-  - [ ] Read from command line
+- [ ] CLI
+  - [ ] Read from stdin (might never happen)
+  - [ ] Read from file (might never happen)
+  - [x] Read from command line (was easier than I thought)
 
 ## Algorithm
 
